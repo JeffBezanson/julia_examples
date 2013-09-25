@@ -2,22 +2,10 @@
 # Searching
 ##########################################################
 
-function search_part_idx(file, terms::Array)
+function search_part_idx(indexfile, terms::Array, op="and")
     ## YOUR CODE HERE ##
 
-    part_idx, docnames = as_deserialized(file)
-    results = IntSet()
-    first = true
-    for term in terms
-        ids = get(part_idx, term, [])
-        if first
-            union!(results, ids)
-            first = false
-        else
-            intersect!(results, IntSet(ids...))
-        end
-    end
-    { docnames[i] for i in results }
+    # useful functions: get, IntSet, union, intersect, union!, add!
 end
 
 function search_index(terms::String)
@@ -26,16 +14,13 @@ function search_index(terms::String)
     terms = tokens(td)
     terms = filter(tok->!isempty(tok), terms)
 
+    # The Blocks library provides many ways to divide work among processors.
+    # Here, we call it on the part_idx_location directory, which tells it to
+    # divide up the files in that directory.
+    # The call localpart(master_idx) returns a list of files to be handled
+    # by the calling processor.
     master_idx = Block(File(part_idx_location), false, 2)
 
     ## YOUR CODE HERE ##
-    result_docs = @parallel union for i in 1:nworkers()
-        local_files = {}
-        for b in localpart(master_idx)
-            append!(local_files, b)
-        end
-        reduce(union, map(file->search_part_idx(file, terms), local_files))
-    end
 
-    println("results:\n$result_docs")
 end

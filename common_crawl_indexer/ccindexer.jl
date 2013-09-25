@@ -49,8 +49,5 @@ function create_index(n_archives::Int)
     println("about to index $(length(arc_file_uris)) archive files")
 
     ## YOUR CODE HERE ##
-    @parallel for arc in arc_file_uris
-        as_serialized(archive_to_index(cc, arc),
-                      archive_to_index_filename(arc))
-    end
+
 end
