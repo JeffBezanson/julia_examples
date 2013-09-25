@@ -1,25 +1,23 @@
-using TextAnalysis
-using URIParser
-using Stemmers
-using Blocks
-using HDFS
-using Base.FS
-
-include("ccconsts.jl")
-include("ccutils.jl")
-
-
 ##
 # Searching
 ##########################################################
 
 function search_part_idx(file, terms::Array)
-    part_idx = cached_get(file, ()->as_deserialized(file))
+    ## YOUR CODE HERE ##
+
+    part_idx, docnames = as_deserialized(file)
     results = IntSet()
+    first = true
     for term in terms
-        union!(results, get(part_idx, term, []))
+        ids = get(part_idx, term, [])
+        if first
+            union!(results, ids)
+            first = false
+        else
+            intersect!(results, IntSet(ids...))
+        end
     end
-    results
+    { docnames[i] for i in results }
 end
 
 function search_index(terms::String)
@@ -28,9 +26,10 @@ function search_index(terms::String)
     terms = tokens(td)
     terms = filter(tok->!isempty(tok), terms)
 
-    master_idx = cached_get(part_idx_location, ()->Block(openable(part_idx_location), false, 2))
+    master_idx = Block(File(part_idx_location), false, 2)
 
-    result_doc_ids = @parallel union for i in 1:nworkers()
+    ## YOUR CODE HERE ##
+    result_docs = @parallel union for i in 1:nworkers()
         local_files = {}
         for b in localpart(master_idx)
             append!(local_files, b)
@@ -38,11 +37,5 @@ function search_index(terms::String)
         reduce(union, map(file->search_part_idx(file, terms), local_files))
     end
 
-    println("doc ids: $result_doc_ids")
-    # map the document ids to file names 
-    #id_to_doc = cached_get(id_to_doc_location, ()->as_deserialized(openable(id_to_doc_location)))
-    #result_docs = map(id->get(id_to_doc, id, ""), result_doc_ids)
-    #filter(x->!isempty(x), result_docs)
+    println("results:\n$result_docs")
 end
-
-
